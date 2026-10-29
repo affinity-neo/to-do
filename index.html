@@ -102,19 +102,26 @@ const addBlur=()=>setTimeout(()=>{if(S.add&&document.activeElement?.id!=='ai'){S
 function editKey(e,id){if(IME(e))return;if(e.key==='Escape'){S.edit=null;render();return}if(e.key!=='Enter')return;commitEdit(id,e.target.value)}
 const blurEdit=(id,v)=>setTimeout(()=>{if(S.edit===id&&document.activeElement?.id!=='ei')commitEdit(id,v)},150);
 function commitEdit(id,v){if(S.edit!==id)return;v=v.trim();const t=T(id);S.edit=null;if(t&&v){t.text=v;save()}render()}
-function toggle(id){const t=T(id);if(!t)return;t.done=t.done?0:1;let g=0;
- if(t.done){if(D.activePet&&!t.petXpEarned){t.petXpEarned=1;D.petXp=(D.petXp||0)+1;const before=Math.floor(((D.petXp||0)-1)/5)+1,after=Math.floor((D.petXp||0)/5)+1;if(after>before)toast('집중 파트너 레벨 업! 경험치 '+(D.petXp||0));else toast('집중 파트너 경험치 +1')}if(!t.coined){t.coined=1;g+=10}
-  const day=D.todos.filter(x=>x.date===t.date&&!x.arch);
+function scoreCategory(t){const n=(D.cats.find(c=>c.id===t.cid)?.name||'').trim().toLowerCase();return n==='neo'||n==='일정'}
+function deleteTask(id){const t=T(id);if(!t)return;if(t.done&&t.coined&&scoreCategory(t))D.coins=Math.max(0,D.coins-10);D.todos=D.todos.filter(x=>x.id!==id);save();mclose();render()}
+function toggle(id){const t=T(id);if(!t)return;const wasDone=!!t.done;t.done=wasDone?0:1;let g=0;
+ if(scoreCategory(t)){
+  if(t.done){if(!t.coined){t.coined=1;g+=10}}
+  else if(t.coined){g-=10;t.coined=0}
+  const day=D.todos.filter(x=>x.date===t.date&&!x.arch&&scoreCategory(x));
   if(day.length>=3&&day.every(x=>x.done)&&!D.bonus[t.date]){D.bonus[t.date]=1;g+=30}
-  if(!D.cats.find(c=>c.id===t.cid)?.priv){D.log.unshift({text:t.text,ts:Date.now()});D.log.length=Math.min(D.log.length,50)}}
- if(g){D.coins+=g;toast('코인 +'+g)}save();render()}
+  else if(D.bonus[t.date]&&(!day.length||!day.every(x=>x.done))){D.bonus[t.date]=0;g-=30}
+ }else{t.coined=0}
+ if(t.done&&D.activePet&&!t.petXpEarned){t.petXpEarned=1;D.petXp=(D.petXp||0)+1;const before=Math.floor(((D.petXp||0)-1)/5)+1,after=Math.floor((D.petXp||0)/5)+1;if(after>before)toast('집중 파트너 레벨 업! 경험치 '+(D.petXp||0));else toast('집중 파트너 경험치 +1')}
+ if(t.done&&!D.cats.find(c=>c.id===t.cid)?.priv){D.log.unshift({text:t.text,ts:Date.now()});D.log.length=Math.min(D.log.length,50)}
+ if(g){D.coins=Math.max(0,D.coins+g);toast(g>0?'코인 +'+g:'코인 '+g)}save();render()}
 
 /* ---------- 할 일 시트 ---------- */
 let SH=null;
 function sheet(id,v){SH={id,v:v||'main'};drawSheet()}
 function drawSheet(){const t=T(SH.id);if(!t){mclose();return}const v=SH.v,id=SH.id;let body='',title='';
  if(v==='main'){const rows=[['#d9a521','note','메모',t.memo?esc(t.memo.slice(0,18)):'','memo'],['#d0608f','clock','시간 알림',t.time||'','time'],['#d0608f','clock','타이머 열기','','timer'],['#5b63d6','repeat','반복하기 · 루틴 등록하기','매일/매주/매달 설정','routine'],['#5b63d6','arr','내일 하기','',''],['#5b63d6','turn','날짜 바꾸기',t.date,'date'],['#5b63d6','box','보관함으로 이동','',''],['#1d1e21','info','정보 보기','','about']];
-  body=`<div class="big"><button onclick="S.edit='${id}';S.add=null;mclose();render()"><span style="color:#4a6cf7">${ic('pen','width:22px;height:22px')}</span>수정하기</button><button onclick="D.todos=D.todos.filter(x=>x.id!='${id}');save();mclose();render()"><span style="color:#e0476b">${ic('tr','width:22px;height:22px')}</span>삭제하기</button></div>`+rows.map(([c,i,l,s,f],k)=>`<button class="sr" onclick="${f==='routine'?`mclose();routineForm({name:T('${id}').text,cid:T('${id}').cid,memo:T('${id}').memo||'',time:T('${id}').time||''})`:f?`sheet('${id}','${f}')`:k===4?`tomorrow('${id}')`:`archive('${id}')`}"><i style="background:${c}">${ic(i)}</i><span style="flex:1">${l}</span><span class="mu" style="font-size:12px">${s}</span></button>`).join('')}
+  body=`<div class="big"><button onclick="S.edit='${id}';S.add=null;mclose();render()"><span style="color:#4a6cf7">${ic('pen','width:22px;height:22px')}</span>수정하기</button><button onclick="deleteTask('${id}')"><span style="color:#e0476b">${ic('tr','width:22px;height:22px')}</span>삭제하기</button></div>`+rows.map(([c,i,l,s,f],k)=>`<button class="sr" onclick="${f==='routine'?`mclose();routineForm({name:T('${id}').text,cid:T('${id}').cid,memo:T('${id}').memo||'',time:T('${id}').time||''})`:f?`sheet('${id}','${f}')`:k===4?`tomorrow('${id}')`:`archive('${id}')`}"><i style="background:${c}">${ic(i)}</i><span style="flex:1">${l}</span><span class="mu" style="font-size:12px">${s}</span></button>`).join('')}
  else if(v==='memo'){title='메모';body=`<textarea id="sm" placeholder="메모를 입력하세요">${esc(t.memo)}</textarea><button class="btn wide" onclick="svMemo('${id}')">저장</button>`}
  else if(v==='time'){title='시간 알림';body=`<input id="st" type="time" value="${t.time||''}"><div class="row"><button class="btn g wide" onclick="svTime('${id}',1)">알림 끄기</button><button class="btn wide" onclick="svTime('${id}')">저장</button></div>`}
  else if(v==='timer'){title='타이머';body=`<input id="sn" type="number" value="25" min="1"><div class="mu" style="font-size:12px">분 단위로 입력하세요</div><button class="btn wide" onclick="svTimer('${id}')">시작</button>`}
@@ -173,7 +180,7 @@ function vHome(){const isCrew=typeof S.view==='string'&&S.view.startsWith('crew:
  const dayT=vt.filter(t=>t.date===S.date),dn=dayT.filter(t=>t.done).length,pc=dayT.length?Math.round(dn/dayT.length*100):0;
  const dl=new Date(S.date+'T00:00:00'),dlab=(dl.getMonth()+1)+'월 '+dl.getDate()+'일 '+'일월화수목금토'[dl.getDay()]+'요일';
  const tm=S.timer?Math.max(0,Math.ceil((S.timer.end-Date.now())/1000)):0;
- return `<div class="top"><div class="chips">${[ME.uid,...D.follows].filter(i=>i===ME.uid||US[i]).map(i=>{const u=i===ME.uid?D:US[i],on=!isCrew&&(mine?i===ME.uid:i===S.view);return `<button class="chip${on?' on':''}" onclick="S.view=${i===ME.uid?'null':"'"+i+"'"};S.add=null;render()">${avt(u)}${esc(u.name)}</button>`}).join('')}${S.crews.filter(c=>(c.members||[]).includes(ME.uid)).map(c=>`<button class="chip${isCrew&&S.view==='crew:'+c.id?' on':''}" onclick="S.view='crew:${c.id}';S.add=null;render()">👥 ${esc(c.name)}</button>`).join('')}</div><button class="coin" onclick="S.sub='shop';render()">${ic('coin')}${D.coins}</button></div>
+ return `<div class="top"><div class="chips">${[ME.uid,...D.follows].filter(i=>i===ME.uid||US[i]).map(i=>{const u=i===ME.uid?D:US[i],on=!isCrew&&(mine?i===ME.uid:i===S.view);return `<button class="chip${on?' on':''}" onclick="S.view=${i===ME.uid?'null':"'"+i+"'"};S.add=null;render()">${avt(u)}${esc(u.name)}</button>`}).join('')}${S.crews.filter(c=>(c.members||[]).includes(ME.uid)).map(c=>`<button class="chip${isCrew&&S.view==='crew:'+c.id?' on':''}" onclick="S.view='crew:${c.id}';S.add=null;render()">👥 ${esc(c.name)}</button>`).join('')}</div><div class="row" style="gap:6px;flex:none"><button class="btn g" style="padding:9px 12px;font-size:12px" onclick="location.href='https://affinity-neo.github.io/to-do/'">To do 쓰러 가기</button><button class="btn g" style="padding:9px 12px;font-size:12px" onclick="location.href='https://affinity-neo.github.io/to-do-bible/'">말씀 읽으러 가기</button><button class="coin" onclick="S.sub='shop';render()">${ic('coin')}${D.coins}</button></div></div>
  ${S.timer?`<div class="tb row sp"><span class="row">${ic('clock')}${esc(S.timer.txt)}</span><b id="tt">${String(Math.floor(tm/60)).padStart(2,'0')}:${String(tm%60).padStart(2,'0')}</b><button class="mu" onclick="S.timer=null;render()">끄기</button></div>`:''}
  <div class="cols"><div><div class="row">${avt(X,1)}<div><div class="b" style="font-size:17px">${esc(X.name)}</div><div class="mu" style="font-size:12px">${esc(X.bio)||'프로필에서 자기소개를 입력해보세요'}</div></div></div>
  ${dd?`<div class="row mu" style="margin-top:12px;font-size:12px">${ic('flag','width:14px;height:14px')}${esc(dd.name)} ${dd.n>0?'D-'+dd.n:dd.n==0?'D-DAY':'D+'+-dd.n}</div>`:''}
