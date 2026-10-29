@@ -102,7 +102,7 @@ const addBlur=()=>setTimeout(()=>{if(S.add&&document.activeElement?.id!=='ai'){S
 function editKey(e,id){if(IME(e))return;if(e.key==='Escape'){S.edit=null;render();return}if(e.key!=='Enter')return;commitEdit(id,e.target.value)}
 const blurEdit=(id,v)=>setTimeout(()=>{if(S.edit===id&&document.activeElement?.id!=='ei')commitEdit(id,v)},150);
 function commitEdit(id,v){if(S.edit!==id)return;v=v.trim();const t=T(id);S.edit=null;if(t&&v){t.text=v;save()}render()}
-function scoreCategory(t){const n=(D.cats.find(c=>c.id===t.cid)?.name||'').trim().toLowerCase();return n==='neo'||n==='일정'}
+function scoreCategory(t){return true}
 function deleteTask(id){const t=T(id);if(!t)return;if(t.done&&t.coined&&scoreCategory(t))D.coins=Math.max(0,D.coins-1);D.todos=D.todos.filter(x=>x.id!==id);save();mclose();render()}
 function toggle(id){const t=T(id);if(!t)return;const wasDone=!!t.done;t.done=wasDone?0:1;let g=0;
  if(scoreCategory(t)){
@@ -181,6 +181,7 @@ function vHome(){const isCrew=typeof S.view==='string'&&S.view.startsWith('crew:
  const dl=new Date(S.date+'T00:00:00'),dlab=(dl.getMonth()+1)+'월 '+dl.getDate()+'일 '+'일월화수목금토'[dl.getDay()]+'요일';
  const tm=S.timer?Math.max(0,Math.ceil((S.timer.end-Date.now())/1000)):0;
  return `<div class="top"><div class="chips">${[ME.uid,...D.follows].filter(i=>i===ME.uid||US[i]).map(i=>{const u=i===ME.uid?D:US[i],on=!isCrew&&(mine?i===ME.uid:i===S.view);return `<button class="chip${on?' on':''}" onclick="S.view=${i===ME.uid?'null':"'"+i+"'"};S.add=null;render()">${avt(u)}${esc(u.name)}</button>`}).join('')}${S.crews.filter(c=>(c.members||[]).includes(ME.uid)).map(c=>`<button class="chip${isCrew&&S.view==='crew:'+c.id?' on':''}" onclick="S.view='crew:${c.id}';S.add=null;render()">👥 ${esc(c.name)}</button>`).join('')}<button class="chip" onclick="S.sub='ppl';render()" style="align-self:flex-start">＋ 팔로우</button></div><div class="row" style="gap:6px;flex:none"><button class="btn g" style="padding:9px 12px;font-size:12px" onclick="location.href='https://affinity-neo.github.io/to-do-bible/'">말씀 읽으러 가기</button><button class="coin" onclick="S.sub='shop';render()">${ic('coin')}코인 ${D.coins} · 완료 코인 ${D.completeCoins||0}</button></div></div>
+ <div class="mu" style="font-size:12px;margin:8px 0 14px;padding:0 4px">할 일 하나 체크하면 코인 +1 · 오늘 할 일을 모두 완료하면 완료 코인 +1</div>
  ${S.timer?`<div class="tb row sp"><span class="row">${ic('clock')}${esc(S.timer.txt)}</span><b id="tt">${String(Math.floor(tm/60)).padStart(2,'0')}:${String(tm%60).padStart(2,'0')}</b><button class="mu" onclick="S.timer=null;render()">끄기</button></div>`:''}
  <div class="cols"><div><div class="row">${avt(X,1)}<div><div class="b" style="font-size:17px">${esc(X.name)}</div><div class="mu" style="font-size:12px">${esc(X.bio)||'프로필에서 자기소개를 입력해보세요'}</div></div></div>
  ${dd?`<div class="row mu" style="margin-top:12px;font-size:12px">${ic('flag','width:14px;height:14px')}${esc(dd.name)} ${dd.n>0?'D-'+dd.n:dd.n==0?'D-DAY':'D+'+-dd.n}</div>`:''}
